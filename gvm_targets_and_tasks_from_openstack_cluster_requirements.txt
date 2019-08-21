@@ -1,0 +1,2 @@
+python-gvm==1.0.0b3
+python-openstackclient>=3.18.0
