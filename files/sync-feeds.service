@@ -1,0 +1,13 @@
+# this is a service file to sync feeds inside gvm10_app01_1 docker container
+[Unit]
+Description= sync feeds
+
+[Service]
+Type= simple
+User= root
+WorkingDirectory=/root
+ExecStart=/usr/bin/docker exec gvm10_app01_1 "greenbone-nvt-sync; greenbone-scapdata-sync; greenbone-certdata-sync"
+ExecStop=
+
+[Install] 
+WantedBy= multi-user.target
