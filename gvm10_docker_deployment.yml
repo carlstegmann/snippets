@@ -1,0 +1,178 @@
+---
+#Example ansible deployment to have four greenbone vulnerability manager docker container in parallel on a host.
+#Feeds will be synced per day in one container and distributed via shared volume to other containers on the host.
+- hosts: gvm-scanner
+  become: yes
+
+  tasks:
+    - name: Install dependencies
+      apt:
+        pkg: "{{ item }}"
+        state: present
+        cache_valid_time: 600
+      with_items:
+        - python-dev
+        - python-pip
+        - python3-pip
+        - python-yaml
+        - python2.7
+        - rng-tools
+        - docker.io
+
+    - name: copy systemd files
+      copy:
+        src: "{{ item }}"
+        dest: /etc/systemd/system/
+        mode: 0644
+      with_fileglob:
+        - "files/gvm_scanners/systemd/*"
+
+    - name: enable systemd services and timers
+      systemd:
+        name: "{{ item }}"
+        enabled: yes
+        masked: no
+        daemon_reload: yes
+      with_items:
+        - "sync-feeds.service"
+        - "sync-feeds.timer"
+
+    - name: start systemd timers
+      systemd:
+        name: "{{ item }}"
+        state: started
+      with_items:
+        - "sync-feeds.timer"
+
+    - name: PIP install dependencies
+      pip:
+        name: "{{ item.name }}"
+        state: present
+        version: "{{ item.version }}"
+      with_items:
+        - { name: docker-compose, version: "1.9.0" }
+
+    - name: create gvm report directory
+      file:
+        path: /var/local/gvm_reports
+        state: directory
+        mode: 0755
+
+    - name: create openvas directory
+      file:
+        path: /var/local/docker_volumes/openvas
+        state: directory
+        mode: 0755
+
+    - name: create docker volumes
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: 0755
+      with_items:
+        - "/var/local/docker_volumes/gvm"
+        - "/var/local/docker_volumes/openvas"
+        - "/var/local/docker_volumes/gvm10_app01_1/gvmd"
+        - "/var/local/docker_volumes/gvm10_app01_1/CA"
+        - "/var/local/docker_volumes/gvm10_app01_1/private"
+        - "/var/local/docker_volumes/gvm10_app02_1/gvmd"
+        - "/var/local/docker_volumes/gvm10_app02_1/CA"
+        - "/var/local/docker_volumes/gvm10_app02_1/private"
+        - "/var/local/docker_volumes/gvm10_app03_1/gvmd"
+        - "/var/local/docker_volumes/gvm10_app03_1/CA"
+        - "/var/local/docker_volumes/gvm10_app03_1/private"
+        - "/var/local/docker_volumes/gvm10_app04_1/gvmd"
+        - "/var/local/docker_volumes/gvm10_app04_1/CA"
+        - "/var/local/docker_volumes/gvm10_app04_1/private"
+
+    - name: create gvmd gnupg directory
+      file:
+        path: /var/local/docker_volumes/gvm/gvmd/gnupg
+        state: directory
+        mode: 0755
+
+    - name: configure rng-tools to use urandom as hrngdevice
+      lineinfile:
+        path: /etc/default/rng-tools
+        insertafter: '^#HRNGDEVICE=/dev/null'
+        regexp: '^HRNGDEVICE=/dev/urandom$'
+        line: 'HRNGDEVICE=/dev/urandom'
+
+    - name: docker compose
+      docker_service:
+        project_name: gvm10
+        definition:
+          version: '2'
+          services:
+            app01:
+              network_mode: bridge
+              image: <YOUR-GVM10-DOCKER-IMAGE>
+              restart: always
+              ports:
+                - "{{ your-docker-host-ip }}:1443:443"
+                - "{{ your-docker-host-ip }}:19390:9390"
+              dns:
+                - 8.8.8.8
+                - 8.8.4.4
+              volumes:
+                - "/var/local/docker_volumes/gvm:/usr/local/var/lib/gvm/"
+                - "/var/local/docker_volumes/openvas:/usr/local/var/lib/openvas/"
+                - "/var/local/docker_volumes/gvm10_app01_1/gvmd:/usr/local/var/lib/gvm/gvmd/"
+                - "/var/local/docker_volumes/gvm10_app01_1/CA:/usr/local/var/lib/gvm/CA"
+                - "/var/local/docker_volumes/gvm10_app01_1/private:/usr/local/var/lib/gvm/private"
+            app02:
+              network_mode: bridge
+              image: <YOUR-GVM10-DOCKER-IMAGE>
+              restart: always
+              ports:
+                - "{{ your-docker-host-ip }}:2443:443"
+                - "{{ your-docker-host-ip }}:29390:9390"
+              dns:
+                - 8.8.8.8
+                - 8.8.4.4
+              volumes:
+                - "/var/local/docker_volumes/gvm:/usr/local/var/lib/gvm/"
+                - "/var/local/docker_volumes/openvas:/usr/local/var/lib/openvas/"
+                - "/var/local/docker_volumes/gvm10_app02_1/gvmd:/usr/local/var/lib/gvm/gvmd/"
+                - "/var/local/docker_volumes/gvm10_app02_1/CA:/usr/local/var/lib/gvm/CA"
+                - "/var/local/docker_volumes/gvm10_app02_1/private:/usr/local/var/lib/gvm/private"
+
+            app03:
+              network_mode: bridge
+              image: <YOUR-GVM10-DOCKER-IMAGE>
+              restart: always
+              ports:
+                - "{{ your-docker-host-ip }}:3443:443"
+                - "{{ your-docker-host-ip }}:39390:9390"
+              dns:
+                - 8.8.8.8
+                - 8.8.4.4
+              volumes:
+                - "/var/local/docker_volumes/gvm:/usr/local/var/lib/gvm/"
+                - "/var/local/docker_volumes/openvas:/usr/local/var/lib/openvas/"
+                - "/var/local/docker_volumes/gvm10_app03_1/gvmd:/usr/local/var/lib/gvm/gvmd/"
+                - "/var/local/docker_volumes/gvm10_app03_1/CA:/usr/local/var/lib/gvm/CA"
+                - "/var/local/docker_volumes/gvm10_app03_1/private:/usr/local/var/lib/gvm/private"
+
+            app04:
+              network_mode: bridge
+              image: <YOUR-GVM10-DOCKER-IMAGE>
+              restart: always
+              ports:
+                - "{{ your-docker-host-ip }}:4443:443"
+                - "{{ your-docker-host-ip }}:49390:9390"
+              dns:
+                - 8.8.8.8
+                - 8.8.4.4
+              volumes:
+                - "/var/local/docker_volumes/gvm:/usr/local/var/lib/gvm/"
+                - "/var/local/docker_volumes/openvas:/usr/local/var/lib/openvas/"
+                - "/var/local/docker_volumes/gvm10_app04_1/gvmd:/usr/local/var/lib/gvm/gvmd/"
+                - "/var/local/docker_volumes/gvm10_app04_1/CA:/usr/local/var/lib/gvm/CA"
+                - "/var/local/docker_volumes/gvm10_app04_1/private:/usr/local/var/lib/gvm/private"
+
+#this needs to be run per container to setup admin user and password
+#docker exec -i gvm10_app01_1 gvmd --create-user=admin --role=Admin; gvmd --user=admin --new-password="<YOUR-PASSWORD>"
+#docker exec -i gvm10_app02_1 gvmd --create-user=admin --role=Admin; gvmd --user=admin --new-password="<YOUR-PASSWORD>"
+#docker exec -i gvm10_app03_1 gvmd --create-user=admin --role=Admin; gvmd --user=admin --new-password="<YOUR-PASSWORD>"
+#docker exec -i gvm10_app04_1 gvmd --create-user=admin --role=Admin; gvmd --user=admin --new-password="<YOUR-PASSWORD>"
