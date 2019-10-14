@@ -1,0 +1,10 @@
+[Unit]
+Description=start feed sync
+
+[Timer]
+OnActiveSec=24h
+OnUnitActiveSec=24h
+Unit=sync-feeds.service
+
+[Install]
+WantedBy=multi-user.target
