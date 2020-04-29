@@ -11,7 +11,7 @@ sleep 3
 if [ ! -f /init_gvmd_done ]; then
   /bin/bash /scripts/init.sh
 fi
-if ! ($(oidof redis-server > /dev/null)); then
+if ! ($(pidof redis-server > /dev/null)); then
   /usr/bin/redis-server /etc/redis/redis.conf &
 fi
 echo "Testing redis status..."
