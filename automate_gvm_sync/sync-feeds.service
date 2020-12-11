@@ -1,0 +1,14 @@
+# this is a systemd service file to sync feeds a docker container with gvm needs
+[Unit]
+Description= sync feeds from s3 bucket
+
+[Service]
+Type= simple
+User= gvmd
+Group= gvmd
+WorkingDirectory=/home/gvmd
+ExecStart=/bin/sh /home/gvmd/sync-from-s3.sh
+ExecStop=
+
+[Install]
+WantedBy= multi-user.target
