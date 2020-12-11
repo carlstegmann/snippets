@@ -1,0 +1,11 @@
+# this is a example systemd timer file to run the s3 bucket sync every six hours using systemd
+[Unit]
+Description=start feed sync from s3 bucket
+
+[Timer]
+OnActiveSec=6h
+OnUnitActiveSec=6h
+Unit=sync-feeds.service
+
+[Install]
+WantedBy=multi-user.target
