@@ -1,0 +1,50 @@
+# this can be used to automate the daily rsync from greenbone using gitlab into an s3 bucket
+# the s3 bucket can than be used on other systems to work around the one sync by ip limitation on the community feed server from greenbone
+# this will at first do a local rsync and than sync all the files into s3 using s3cmd
+
+stages:
+  - nvt_sync
+  - gvmd_data_sync
+  - scap_sync
+  - cert_sync
+  - sync_to_s3
+
+nvt_sync:
+  stage: nvt_sync
+  tags:
+    - gvm-sync
+  script:
+    - sudo -u gvmd /home/gvmd/greenbone-nvt-sync
+    - sleep 5
+
+gvmd_data_sync:
+  stage: gvmd_data_sync
+  tags:
+    - gvm-sync
+  script:
+    - sudo -u gvmd /home/gvmd/greenbone-feed-sync --type GVMD_DATA
+    - sleep 5
+
+scap_sync:
+  stage: scap_sync
+  tags:
+    - gvm-sync
+  script:
+    - sudo -u gvmd /home/gvmd/greenbone-feed-sync --type SCAP
+    - sleep 5
+
+cert_sync:
+  stage: cert_sync
+  tags:
+    - gvm-sync
+  script:
+    - sudo -u gvmd /home/gvmd/greenbone-feed-sync --type CERT
+    - sleep 5
+
+sync_to_s3:
+  stage: sync_to_s3
+  tags:
+    - gvm-sync
+  script:
+    - sudo -u gvmd /home/gvmd/sync-to-s3.sh
+    - sleep 5
