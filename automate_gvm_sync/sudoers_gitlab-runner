@@ -1,0 +1,12 @@
+# place this file in /etc/sudoers.d/gitlab-runner
+# this is an example to enable a gitlab runner to sync files for you from greenbone community feed server
+# it will allow the user gitlab-runner to execute the commands below as the user gvmd if you choose to use this as the name for the sync user
+# you will get the scripts greenbone-feed-sync and greenbone-nvt-sync when building from source 
+# from https://github.com/greenbone/gvmd/blob/master/tools/greenbone-feed-sync.in
+# and https://github.com/greenbone/openvas/blob/master/tools/greenbone-nvt-sync.in
+# the script sync-to-s3.sh is found inside this repository you will need s3cmd to be able to execute it
+%gitlab-runner ALL=(gvmd) NOPASSWD:/home/gvmd/greenbone-feed-sync --type GVMD_DATA
+%gitlab-runner ALL=(gvmd) NOPASSWD:/home/gvmd/greenbone-feed-sync --type SCAP
+%gitlab-runner ALL=(gvmd) NOPASSWD:/home/gvmd/greenbone-feed-sync --type CERT
+%gitlab-runner ALL=(gvmd) NOPASSWD:/home/gvmd/greenbone-nvt-sync
+%gitlab-runner ALL=(gvmd) NOPASSWD:/home/gvmd/sync-to-s3.sh
